@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <math.h>
 #ifdef _WIN32
@@ -13,11 +14,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <limits.h>
 typedef int SOCKET;
 #define SOCKET_ERROR -1
 #define INVALID_SOCKET -1
 #define SOCKADDR sockaddr
 #define closesocket close
+#define MAXINT INT_MAX
 #endif
 #include "simvarDefs.h"
 
