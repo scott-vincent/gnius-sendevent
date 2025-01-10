@@ -153,11 +153,11 @@ void outputSimVars()
         return;
     }
 
-    printf("#G-NIUS,");
+    printf("#15,C172,");
     outputAircraft(&simVars.self);
 
     if (simVars.ai.lat != MAXINT) {
-        printf("#G-NIAI,");
+        printf("#16,P28A,");
         outputAircraft(&simVars.ai);
     }
 }
