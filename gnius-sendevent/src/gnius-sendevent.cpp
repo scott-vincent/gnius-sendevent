@@ -168,13 +168,37 @@ void outputSimVars()
 int main(int argc, char** argv)
 {
     if (argc < 3) {
-        printf("Please specify a host (ip addr) and an event\n");
+        printf("Please specify a file (containing host ip addr) and an event\n");
         exit(1);
     }
 
     printf("flightsim-sendevent %s\n", sendeventVersion);
 
-    strcpy(gniusHost, argv[1]);
+    char filePath[256];
+    strcpy(filePath, argv[0]);
+    char *pos = strrchr(filePath, '/');
+    if (!pos) {
+        pos = strrchr(filePath, '\\');
+    }
+    pos++;
+    *pos = '\0';
+    strcat(filePath, argv[1]);
+
+    FILE* inf = fopen(filePath, "r");
+    if (!inf) {
+        printf("Failed to open file %s\n", filePath);
+        exit(1);
+    }
+
+    int count = fscanf(inf, "%s", gniusHost);
+    fclose(inf);
+
+    if (count != 1) {
+        printf("Failed to read file %s\n", filePath);
+        exit(1);
+    }
+
+    printf("G-NIUS host: %s\n", gniusHost);
 
     if (!init()) {
         printf("Init failed\n");
