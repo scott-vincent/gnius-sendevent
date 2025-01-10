@@ -167,8 +167,8 @@ void outputSimVars()
 ///
 int main(int argc, char** argv)
 {
-    if (argc < 3) {
-        printf("Please specify a file (containing host ip addr) and an event\n");
+    if (argc < 2) {
+        printf("Please specify an event\n");
         exit(1);
     }
 
@@ -182,7 +182,7 @@ int main(int argc, char** argv)
     }
     pos++;
     *pos = '\0';
-    strcat(filePath, argv[1]);
+    strcat(filePath, "gnius.host");
 
     FILE* inf = fopen(filePath, "r");
     if (!inf) {
@@ -205,21 +205,21 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    if (strcmp(argv[2], "simvars") == 0) {
+    if (strcmp(argv[1], "simvars") == 0) {
         printf("Sending: EVENT_CLIENT\n");
         if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
             outputSimVars();
         }
     }
-    else if (strcmp(argv[2], "ai_start") == 0) {
+    else if (strcmp(argv[1], "ai_start") == 0) {
         printf("Sending: EVENT_ADD_AI\n");
         sendEvent(EVENT_ADD_AI, 0, false);
     }
-    else if (strcmp(argv[2], "ai_stop") == 0) {
+    else if (strcmp(argv[1], "ai_stop") == 0) {
         printf("Sending: EVENT_REMOVE_AI\n");
         sendEvent(EVENT_REMOVE_AI, 0, false);
     }
-    else if (strcmp(argv[2], "quit") == 0) {
+    else if (strcmp(argv[1], "quit") == 0) {
         printf("Sending: EVENT_QUIT\n");
         sendEvent(EVENT_QUIT, 0, false);
     }
