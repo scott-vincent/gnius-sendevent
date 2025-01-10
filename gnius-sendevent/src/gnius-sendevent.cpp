@@ -23,11 +23,11 @@ typedef int SOCKET;
 
 extern WriteEvent WriteEvents[];
 
-const char* sendeventVersion = "v1.0.2";
+const char* sendeventVersion = "v1.0.3";
 const bool Debug = false;
 
-const char* dataLinkHost = "192.168.1.80";
-const int dataLinkPort = 53020;
+char gniusHost[256];
+const int gniusPort = 53020;
 
 SimVars simVars;
 long writeDataSize = sizeof(WriteData);
@@ -62,8 +62,8 @@ EVENT_ID sendEvent(EVENT_ID eventId, double value, bool wantResponse)
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
 
     writeAddr.sin_family = AF_INET;
-    writeAddr.sin_port = htons(dataLinkPort);
-    inet_pton(AF_INET, dataLinkHost, &writeAddr.sin_addr);
+    writeAddr.sin_port = htons(gniusPort);
+    inet_pton(AF_INET, gniusHost, &writeAddr.sin_addr);
 
     int bytes = sendto(sockfd, (char*)&writeRequest, sizeof(writeRequest), 0, (SOCKADDR*)&writeAddr, sizeof(writeAddr));
     if (bytes <= 0) {
@@ -163,33 +163,35 @@ void outputSimVars()
 ///
 int main(int argc, char** argv)
 {
-    if (argc < 2) {
-        printf("Please specify an event\n");
+    if (argc < 3) {
+        printf("Please specify a host (ip addr) and an event\n");
         exit(1);
     }
 
     printf("flightsim-sendevent %s\n", sendeventVersion);
+
+    strcpy(gniusHost, argv[1]);
 
     if (!init()) {
         printf("Init failed\n");
         exit(1);
     }
 
-    if (strcmp(argv[1], "simvars") == 0) {
+    if (strcmp(argv[2], "simvars") == 0) {
         printf("Sending: EVENT_CLIENT\n");
         if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
             outputSimVars();
         }
     }
-    else if (strcmp(argv[1], "ai_start") == 0) {
+    else if (strcmp(argv[2], "ai_start") == 0) {
         printf("Sending: EVENT_ADD_AI\n");
         sendEvent(EVENT_ADD_AI, 0, false);
     }
-    else if (strcmp(argv[1], "ai_stop") == 0) {
+    else if (strcmp(argv[2], "ai_stop") == 0) {
         printf("Sending: EVENT_REMOVE_AI\n");
         sendEvent(EVENT_REMOVE_AI, 0, false);
     }
-    else if (strcmp(argv[1], "quit") == 0) {
+    else if (strcmp(argv[2], "quit") == 0) {
         printf("Sending: EVENT_QUIT\n");
         sendEvent(EVENT_QUIT, 0, false);
     }
