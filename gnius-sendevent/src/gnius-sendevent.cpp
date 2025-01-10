@@ -180,7 +180,12 @@ int main(int argc, char** argv)
     if (!pos) {
         pos = strrchr(filePath, '\\');
     }
-    pos++;
+    if (!pos) {
+        pos = filePath;
+    }
+    else {
+        pos++;
+    }
     *pos = '\0';
     strcat(filePath, "gnius.host");
 
