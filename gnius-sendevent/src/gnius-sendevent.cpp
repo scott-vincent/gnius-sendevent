@@ -79,10 +79,10 @@ EVENT_ID sendEvent(EVENT_ID eventId, double value, bool wantResponse)
     }
 
     if (wantResponse) {
-        // Wait up to half a second for a reply
+        // Wait up to one second for a reply
         timeval timeout;
-        timeout.tv_sec = 0;
-        timeout.tv_usec = 500000;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
 
         fd_set fds;
         FD_ZERO(&fds);
