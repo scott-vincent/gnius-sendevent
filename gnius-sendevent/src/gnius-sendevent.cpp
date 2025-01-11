@@ -203,7 +203,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    printf("G-NIUS host: %s\n", gniusHost);
+    //printf("G-NIUS host: %s\n", gniusHost);
 
     if (!init()) {
         printf("Init failed\n");
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
     }
 
     if (strcmp(argv[1], "simvars") == 0) {
-        printf("Sending: EVENT_CLIENT\n");
+        //printf("Sending: EVENT_CLIENT\n");
         if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
             outputSimVars();
         }
