@@ -141,9 +141,14 @@ void cleanup()
 #endif
 }
 
-void outputAircraft(AircraftData* aircraft)
+char* aircraftStr(AircraftData* aircraft)
 {
-    printf("%f,%f,%d,%d,%d\n", aircraft->lat, aircraft->lon, (int)round(aircraft->heading), (int)round(aircraft->alt), (int)round(aircraft->speed));
+    static char aircraftStr[256];
+
+    sprintf(aircraftStr, "%f,%f,%d,%d,%d",
+        aircraft->lat, aircraft->lon, (int)round(aircraft->heading), (int)round(aircraft->alt), (int)round(aircraft->speed));
+
+    return aircraftStr;
 }
 
 void outputSimVars()
@@ -153,13 +158,32 @@ void outputSimVars()
         return;
     }
 
-    printf("#15,C172,");
-    outputAircraft(&simVars.self);
+    printf("#15,C172,%s\n", aircraftStr(&simVars.self));
 
     if (simVars.ai.lat != MAXINT) {
-        printf("#16,P28A,");
-        outputAircraft(&simVars.ai);
+        printf("#16,P28A,%s\n", aircraftStr(&simVars.ai));
     }
+}
+
+void writeSimVars()
+{
+    FILE *outf = fopen("gnius.data", "w");
+    if (!outf) {
+        printf("Failed to write gnius.data\n");
+        return;
+    }
+
+    if (simVars.connected == 0 || simVars.self.lat == MAXINT) {
+        fprintf(outf, "\n");
+    }
+    else {
+        fprintf(outf, "#15,C172,%s\n", aircraftStr(&simVars.self));
+
+        if (simVars.ai.lat != MAXINT) {
+            fprintf(outf, "#16,P28A,%s\n", aircraftStr(&simVars.ai));
+        }
+    }
+    fclose(outf);
 }
 
 ///
@@ -210,7 +234,19 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    if (strcmp(argv[1], "simvars") == 0) {
+    if (strcmp(argv[1], "background") == 0) {
+        while (true) {
+            if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
+                writeSimVars();
+            }
+            else {
+                simVars.connected = false;
+                writeSimVars();
+            }
+            Sleep(1000);
+        }
+    }
+    else if (strcmp(argv[1], "simvars") == 0) {
         //printf("Sending: EVENT_CLIENT\n");
         if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
             outputSimVars();
@@ -229,7 +265,7 @@ int main(int argc, char** argv)
         sendEvent(EVENT_QUIT, 0, false);
     }
     else {
-        printf("Please specify a valid event, e.g. simvars, ai_start, ai_stop, quit\n");
+        printf("Please specify a valid event, e.g. background, simvars, ai_start, ai_stop, quit\n");
     }
 
     cleanup();
