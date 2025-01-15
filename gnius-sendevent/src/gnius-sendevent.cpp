@@ -28,51 +28,44 @@ typedef int SOCKET;
 extern WriteEvent WriteEvents[];
 
 const char* sendeventVersion = "v1.0.3";
-const bool Debug = false;
 
-char gniusHost[256];
-const int gniusPort = 53020;
+char dataLinkHost[256];
+const int dataLinkPort = 53021;
 
-SimVars simVars;
 long writeDataSize = sizeof(WriteData);
-long clientDataSize = sizeof(SimVars);
 
 
 /// <summary>
 /// Send event to Flight Sim with optional data value and read returned value
 /// </summary>
-EVENT_ID sendEvent(EVENT_ID eventId, double value, bool wantResponse)
+void sendEvent(EVENT_ID eventId, double value, bool wantResponse)
 {
     EVENT_ID retVal = EVENT_SIM_START;
     SOCKET sockfd;
     sockaddr_in writeAddr;
     Request writeRequest;
 
-    if (eventId == EVENT_CLIENT) {
-        writeRequest.requestedSize = clientDataSize;
-    }
-    else {
-        writeRequest.requestedSize = writeDataSize;
-    }
+    writeRequest.requestedSize = writeDataSize;
     writeRequest.writeData.eventId = eventId;
     writeRequest.writeData.value = value;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
         printf("Failed to create UDP socket for writing\n");
-        return retVal;
+        return;
     }
 
     int opt = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
 
     writeAddr.sin_family = AF_INET;
-    writeAddr.sin_port = htons(gniusPort);
-    inet_pton(AF_INET, gniusHost, &writeAddr.sin_addr);
+    writeAddr.sin_port = htons(dataLinkPort);
+    inet_pton(AF_INET, dataLinkHost, &writeAddr.sin_addr);
 
     int bytes = sendto(sockfd, (char*)&writeRequest, sizeof(writeRequest), 0, (SOCKADDR*)&writeAddr, sizeof(writeAddr));
     if (bytes <= 0) {
         printf("Failed to write event %d\n", eventId);
-        return retVal;
+        closesocket(sockfd);
+        return;
     }
     else {
         //printf("Sent %d bytes to %s\n", bytes, dataLinkHost);
@@ -91,17 +84,11 @@ EVENT_ID sendEvent(EVENT_ID eventId, double value, bool wantResponse)
         bytes = 0;
         int sel = select(FD_SETSIZE, &fds, 0, 0, &timeout);
         if (sel > 0) {
-            if (eventId == EVENT_CLIENT) {
-                bytes = recv(sockfd, (char*)&simVars, clientDataSize, 0);
-                if (bytes == clientDataSize) {
-                    retVal = EVENT_CLIENT;
-                }
-                else if (bytes > 0) {
-                    printf("Received %d bytes instead of %d bytes\n", bytes, clientDataSize);
-                }
-            }
-            else {
-                bytes = recv(sockfd, (char*)&retVal, sizeof(int), 0);
+            char data[256];
+            bytes = recv(sockfd, data, sizeof(data), 0);
+            if (bytes > 0 && bytes < 256) {
+                data[bytes] = '\0';
+                printf(data);
             }
         }
 
@@ -111,7 +98,6 @@ EVENT_ID sendEvent(EVENT_ID eventId, double value, bool wantResponse)
     }
 
     closesocket(sockfd);
-    return retVal;
 }
 
 /// <summary>
@@ -139,51 +125,6 @@ void cleanup()
 #ifdef _WIN32
     WSACleanup();
 #endif
-}
-
-char* aircraftStr(AircraftData* aircraft)
-{
-    static char aircraftStr[256];
-
-    sprintf(aircraftStr, "%f,%f,%d,%d,%d",
-        aircraft->lat, aircraft->lon, (int)round(aircraft->heading), (int)round(aircraft->alt), (int)round(aircraft->speed));
-
-    return aircraftStr;
-}
-
-void outputSimVars()
-{
-    if (simVars.connected == 0 || simVars.self.lat == MAXINT) {
-        printf("\n");
-        return;
-    }
-
-    printf("#15,C172,%s\n", aircraftStr(&simVars.self));
-
-    if (simVars.ai.lat != MAXINT) {
-        printf("#16,P28A,%s\n", aircraftStr(&simVars.ai));
-    }
-}
-
-void writeSimVars()
-{
-    FILE *outf = fopen("gnius.data", "w");
-    if (!outf) {
-        printf("Failed to write gnius.data\n");
-        return;
-    }
-
-    if (simVars.connected == 0 || simVars.self.lat == MAXINT) {
-        fprintf(outf, "\n");
-    }
-    else {
-        fprintf(outf, "#15,C172,%s\n", aircraftStr(&simVars.self));
-
-        if (simVars.ai.lat != MAXINT) {
-            fprintf(outf, "#16,P28A,%s\n", aircraftStr(&simVars.ai));
-        }
-    }
-    fclose(outf);
 }
 
 ///
@@ -219,7 +160,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    int count = fscanf(inf, "%s", gniusHost);
+    int count = fscanf(inf, "%s", dataLinkHost);
     fclose(inf);
 
     if (count != 1) {
@@ -227,30 +168,16 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    //printf("G-NIUS host: %s\n", gniusHost);
+    //printf("G-NIUS host: %s\n", dataLinkHost);
 
     if (!init()) {
         printf("Init failed\n");
         exit(1);
     }
 
-    if (strcmp(argv[1], "background") == 0) {
-        while (true) {
-            if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
-                writeSimVars();
-            }
-            else {
-                simVars.connected = false;
-                writeSimVars();
-            }
-            Sleep(1000);
-        }
-    }
-    else if (strcmp(argv[1], "simvars") == 0) {
+    if (strcmp(argv[1], "simvars") == 0) {
         //printf("Sending: EVENT_CLIENT\n");
-        if (sendEvent(EVENT_CLIENT, 0, true) == EVENT_CLIENT) {
-            outputSimVars();
-        }
+        sendEvent(EVENT_CLIENT, 0, true);
     }
     else if (strcmp(argv[1], "ai_start") == 0) {
         printf("Sending: EVENT_ADD_AI\n");
@@ -265,7 +192,7 @@ int main(int argc, char** argv)
         sendEvent(EVENT_QUIT, 0, false);
     }
     else {
-        printf("Please specify a valid event, e.g. background, simvars, ai_start, ai_stop, quit\n");
+        printf("Please specify a valid event, e.g. simvars, ai_start, ai_stop, quit\n");
     }
 
     cleanup();
