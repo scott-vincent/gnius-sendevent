@@ -168,7 +168,7 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    //printf("G-NIUS host: %s\n", dataLinkHost);
+    printf("G-NIUS host: %s\n", dataLinkHost);
 
     if (!init()) {
         printf("Init failed\n");
